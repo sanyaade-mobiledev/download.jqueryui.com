@@ -177,3 +177,9 @@ Builder.prototype = {
 };
 
 module.exports = Builder;
+
+process.on('message', function(m) {
+	new Builder( m.fields ).writeTo( process.stdout, function() {
+		process.exit( 0 );
+	});
+});

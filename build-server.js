@@ -6,7 +6,7 @@ var fs = require( "fs" ),
 	connect = require( "connect" ),
 	handlebars = require( "handlebars" ),
 	formidable = require( "formidable" ),
-	Builder = require( "./build-backend" );
+	fork = require( "child_process" ).fork;
 
 var httpPort = 8088,
 	httpHost = "localhost",
@@ -35,11 +35,9 @@ function route(app) {
 			}
 			response.setHeader( "Content-Type", "application/zip" );
 			response.setHeader( "Content-Disposition", "attachment; filename=jquery-ui-custom-1.9.zip" );
-			// TODO use child_process.fork and process.send to make building response async
-			// see https://gist.github.com/6d635e9001b92215266a
-			new Builder( list ).writeTo( response, function() {
-				response.end();
-			});
+			var child = fork( "./build-backend.js", [], { silent: true });
+			child.stdout.pipe( response );
+			child.send({ fields: list });
 		});
 	});
 }
