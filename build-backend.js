@@ -157,20 +157,23 @@ Builder.prototype = {
 	writeTo: function( response, callback ) {
 		var that = this;
 		this.build(function( cwd, target ) {
-			var child = spawn( "zip", [ "-r", "-", target ], { cwd: cwd } );
-			child.stdout.on( "data", function( data) {
-				response.write( data );
-			});
-			child.stderr.on( "data", function( data) {
-				// console.error( data.toString() );
-			});
-			child.on( "exit", function( code ) {
-				// rimraf.sync( cwd );
-				if ( code !== 0 ) {
-					callback( "zip failed :(" );
+			var zipstream = require( "zipstream" );
+			var zip = zipstream.createZip();
+			zip.pipe( response );
+			var files = glob( cwd + "/" + target + "/**" );
+			var dir = /\/$/;
+			async.forEachSeries( files, function( file, next ) {
+				if ( dir.test( file ) ) {
+					next();
 					return;
 				}
-				callback( null, "All good!" );
+				zip.addFile( fs.createReadStream( file ), { name: file.replace( cwd, "" ) }, next );
+			}, function() {
+				zip.finalize(function( written ) {
+					rimraf.sync( cwd );
+					console.log(written + ' total bytes written');
+					callback( null, "All good!" );
+				});
 			});
 		});
 	}
